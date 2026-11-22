@@ -32,8 +32,10 @@ def duration_seconds(value):
 def category_for(title, channel):
     t = title.lower()
     c = channel.lower()
-    if "rockstar" in c or "official trailer" in t or "launch trailer" in t:
-        return "Official / Trailer"
+    if c == "rockstar games":
+        return "Rockstar Official"
+    if any(x in t for x in ("trailer", "launch trailer")):
+        return "Trailer / Repost"
     if any(x in t for x in ("funny", "fail", "meme", "hilarious", "glitch", "chaos")):
         return "Funny Moments"
     if any(x in t for x in ("gameplay", "mission", "vehicle", "car", "police", "map", "feature", "secret")):
@@ -74,7 +76,7 @@ def main():
 
             try:
                 published = datetime.fromisoformat(sn.get("publishedAt", "").replace("Z", "+00:00"))
-                age_days = max((now - published).total_seconds() / 86400, 0.25)
+                age_days = max((now - published).total_seconds() / 86400, 1.0)
             except (ValueError, TypeError):
                 published, age_days = now, 1.0
             views, likes, comments = (int(st.get(k, 0)) for k in
@@ -96,7 +98,8 @@ def main():
                 "comment_rate_pct":round(comment_rate,3),
                 "ranking_score":round(score,4),
                 "category":category_for(title, channel),
-                "shorts_status":"Short-form candidate (<=180s); vertical Shorts format not verifiable via this API"})
+                "shorts_status":"Short-form candidate (<=180s); vertical Shorts format not verifiable via this API",
+                "shorts_hint_in_title":bool(re.search(r"#shorts|\\bshorts\\b", title, re.I))})
     rows.sort(key=lambda r:r["ranking_score"], reverse=True)
 
     OUT.mkdir(exist_ok=True)
