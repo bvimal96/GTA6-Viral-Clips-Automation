@@ -117,7 +117,7 @@ def main():
                 "shorts_hint_in_title":bool(re.search(r"#shorts|\bshorts\b", title, re.I)),
                 "candidate_group":group,
                 "review_flag":review_flag,
-                "creator_shortlist":category_for(title, channel) not in ("Rockstar Official","Trailer / Repost") and len(re.sub(r"#\w+|[^A-Za-z0-9 ]"," ", title).split()) >= 3})
+                "creator_shortlist":shortlist})
     rows.sort(key=lambda r:r["ranking_score"], reverse=True)
 
     OUT.mkdir(exist_ok=True)
