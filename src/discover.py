@@ -52,7 +52,8 @@ def main():
 
     OUT.mkdir(exist_ok=True)
     STATE.parent.mkdir(exist_ok=True)
-    seen = set(json.loads(STATE.read_text()) if STATE.exists() else [])
+    seen_ids = json.loads(STATE.read_text()) if STATE.exists() else []
+    seen = set(seen_ids)
     fresh = [r for r in rows if r["video_id"] not in seen]
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     for name, data in ((f"candidates_{stamp}.json",rows),
@@ -62,8 +63,9 @@ def main():
         with (OUT/f"candidates_{stamp}.csv").open("w",newline="",encoding="utf-8-sig") as f:
             w = csv.DictWriter(f,fieldnames=list(rows[0].keys()))
             w.writeheader(); w.writerows(rows)
-    seen.update(r["video_id"] for r in rows)
-    STATE.write_text(json.dumps(sorted(seen)[-10000:],indent=2),encoding="utf-8")
+    new_ids = [r["video_id"] for r in rows if r["video_id"] not in seen]
+    seen_ids = (seen_ids + new_ids)[-10000:]
+    STATE.write_text(json.dumps(seen_ids,indent=2),encoding="utf-8")
     print(f"Discovered {len(rows)} public videos; {len(fresh)} new candidates.")
     return 0
 
