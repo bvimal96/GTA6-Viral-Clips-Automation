@@ -30,18 +30,28 @@ def duration_seconds(value):
     return hours * 3600 + minutes * 60 + seconds
 
 def candidate_review(title, category):
-    """Title-only pre-screen; does not verify content, vertical format, or reuse rights."""
+    """Conservative title-only triage; never verifies footage, Shorts format, or reuse rights."""
     if category in ("Rockstar Official", "Trailer / Repost"):
-        return "EXCLUDE", "OFFICIAL_OR_TRAILER", False
-    # Unicode-aware tokenization keeps meaningful non-English titles eligible for review.
-    cleaned = re.sub(r"#\w+|[^\w\s]", " ", title)
+        return "EXCLUDE", "OFFICIAL_OR_TRAILER", False, "Official channel or trailer wording"
+
+    # Only title text is used for HIGH_POTENTIAL; description-only GTA 6 mentions are insufficient.
+    cleaned = re.sub(r"#\\w+|[^\\w\\s]", " ", title)
     words = cleaned.split()
-    direct_gta6_title = bool(GTA6_RE.search(title) or re.search(r"#gta\s*6|#gtavi", title, re.I))
-    if direct_gta6_title and len(words) >= 3:
-        return "HIGH_POTENTIAL", "TITLE_CONTEXT_PRESENT", True
-    if len(words) < 3:
-        return "MANUAL_REVIEW", "WEAK_TITLE_CONTEXT", False
-    return "MANUAL_REVIEW", "MANUAL_CHECK", False
+    title_has_gta6 = bool(GTA6_RE.search(title) or re.search(r"#gta\\s*6|#gtavi", title, re.I))
+    topic_terms = (
+        "gameplay", "mission", "vehicle", "car", "police", "map", "feature",
+        "secret", "easter egg", "hidden", "funny", "fail", "meme", "glitch",
+        "comparison", "versus", "vs", "lucia", "jason", "vice city",
+        "real life", "details", "things", "facts", "update", "mod"
+    )
+    title_lower = title.lower()
+    has_specific_topic = any(term in title_lower for term in topic_terms)
+
+    if title_has_gta6 and len(words) >= 3 and has_specific_topic:
+        return "HIGH_POTENTIAL", "GTA6_TITLE_AND_TOPIC", True, "GTA 6 named in title with a specific topic clue"
+    if len(words) < 3 or not title_has_gta6:
+        return "MANUAL_REVIEW", "WEAK_TITLE_CONTEXT", False, "Title alone does not establish clear GTA 6 topic"
+    return "MANUAL_REVIEW", "TOPIC_NOT_CLEAR", False, "GTA 6 title present but specific clip topic is unclear"
 
 def category_for(title, channel):
     t = title.lower()
@@ -102,7 +112,7 @@ def main():
             score = (0.55 * math.log1p(views_per_day)
                      + 0.20 * math.log1p(views)
                      + 0.25 * math.log1p(like_rate + comment_rate))
-            group, review_flag, shortlist = candidate_review(title, category_for(title, channel))
+            group, review_flag, shortlist, review_reason = candidate_review(title, category_for(title, channel))
             rows.append({"video_id":item["id"],"title":title,"channel":channel,
                 "published_at":sn.get("publishedAt",""),
                 "url":f"https://www.youtube.com/watch?v={item['id']}",
@@ -117,6 +127,7 @@ def main():
                 "shorts_hint_in_title":bool(re.search(r"#shorts|\bshorts\b", title, re.I)),
                 "candidate_group":group,
                 "review_flag":review_flag,
+                "review_reason":review_reason,
                 "creator_shortlist":shortlist})
     rows.sort(key=lambda r:r["ranking_score"], reverse=True)
 
