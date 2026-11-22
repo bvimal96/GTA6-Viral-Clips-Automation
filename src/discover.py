@@ -8,9 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output"
 STATE = ROOT / "data" / "seen_video_ids.json"
 API = "https://www.googleapis.com/youtube/v3"
-GTA6_RE = re.compile(r"\\b(?:gta\\s*6|gta\\s*vi|grand theft auto\\s*vi)\\b", re.I)
-GTA5_RE = re.compile(r"\\b(?:gta\\s*5|gta\\s*v|grand theft auto\\s*v)\\b", re.I)
-DURATION_RE = re.compile(r"PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?")
+GTA6_RE = re.compile(r"\b(?:gta\s*6|gta\s*vi|grand theft auto\s*vi)\b", re.I)
+GTA5_RE = re.compile(r"\b(?:gta\s*5|gta\s*v|grand theft auto\s*v)\b", re.I)
+DURATION_RE = re.compile(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?")
 
 def api_get(path, params):
     key = os.environ.get("YOUTUBE_API_KEY", "").strip()
@@ -38,9 +38,9 @@ def candidate_review(title, category):
     if GTA5_RE.search(title):
         return "EXCLUDE", "GTA5_CROSSOVER_OR_TITLE", False, "GTA 5 is explicitly mentioned in the title"
 
-    cleaned = re.sub(r"#\\w+|[^\\w\\s]", " ", title)
+    cleaned = re.sub(r"#\w+|[^\w\s]", " ", title)
     words = cleaned.split()
-    title_has_gta6 = bool(GTA6_RE.search(title) or re.search(r"#gta\\s*6|#gtavi", title, re.I))
+    title_has_gta6 = bool(GTA6_RE.search(title) or re.search(r"#gta\s*6|#gtavi", title, re.I))
     topic_terms = (
         "gameplay", "mission", "vehicle", "car", "police", "map", "feature",
         "secret", "easter egg", "hidden", "funny", "fail", "meme", "glitch",
@@ -181,7 +181,7 @@ def main():
                 "ranking_score":round(score,4),
                 "category":category,
                 "shorts_status":"Short-form candidate (<=180s); vertical Shorts format not verifiable via this API",
-                "shorts_hint_in_title":bool(re.search(r"#shorts|\\bshorts\\b", title, re.I)),
+                "shorts_hint_in_title":bool(re.search(r"#shorts|\bshorts\b", title, re.I)),
                 "candidate_group":group,
                 "review_flag":review_flag,
                 "review_reason":review_reason,
