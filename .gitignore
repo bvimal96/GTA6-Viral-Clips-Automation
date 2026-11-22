@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+output/
+source_media/*
+!source_media/README.md
+.DS_Store
