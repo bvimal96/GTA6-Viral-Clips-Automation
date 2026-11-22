@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Discover and rank public GTA 6 YouTube short-form candidates. No downloading or publishing."""
-import csv, html, json, math, os, re, sys, urllib.parse, urllib.request
+import csv, html, json, math, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -13,14 +13,64 @@ GTA5_RE = re.compile(r"\b(?:gta\s*5|gta\s*v|grand theft auto\s*v)\b", re.I)
 DURATION_RE = re.compile(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?")
 
 def api_get(path, params):
+    """Call YouTube API with bounded retries for transient rate limits and server errors."""
     key = os.environ.get("YOUTUBE_API_KEY", "").strip()
     if not key:
         raise RuntimeError("Missing YOUTUBE_API_KEY GitHub Actions secret.")
     params = {**params, "key": key}
     url = f"{API}/{path}?{urllib.parse.urlencode(params)}"
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as response:
-        return json.loads(response.read().decode("utf-8"))
+    max_attempts = 5
+
+    for attempt in range(max_attempts):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            reason = ""
+            try:
+                error_data = json.loads(body).get("error", {})
+                errors = error_data.get("errors", [])
+                reason = errors[0].get("reason", "") if errors else ""
+                message = error_data.get("message", body[:300])
+            except (ValueError, AttributeError):
+                message = body[:300]
+
+            retryable = exc.code in (429, 500, 502, 503, 504) or (
+                exc.code == 403 and reason in ("rateLimitExceeded", "userRateLimitExceeded")
+            )
+            if not retryable or attempt == max_attempts - 1:
+                raise RuntimeError(
+                    f"YouTube API request failed: HTTP {exc.code}"
+                    + (f" ({reason})" if reason else "")
+                    + f" — {message}"
+                ) from exc
+
+            retry_after = exc.headers.get("Retry-After")
+            try:
+                delay = float(retry_after) if retry_after else min(2 ** (attempt + 1), 30)
+            except (TypeError, ValueError):
+                delay = min(2 ** (attempt + 1), 30)
+            delay = max(1, min(delay, 60))
+            print(
+                f"YouTube API HTTP {exc.code}"
+                + (f" ({reason})" if reason else "")
+                + f"; retry {attempt + 1}/{max_attempts - 1} in {delay:g}s.",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+        except (urllib.error.URLError, TimeoutError) as exc:
+            if attempt == max_attempts - 1:
+                raise RuntimeError(f"YouTube API network request failed after {max_attempts} attempts: {exc}") from exc
+            delay = min(2 ** (attempt + 1), 30)
+            print(
+                f"YouTube API network error; retry {attempt + 1}/{max_attempts - 1} in {delay}s.",
+                file=sys.stderr,
+            )
+            time.sleep(delay)
+
+    raise RuntimeError("YouTube API request failed after retry limit.")
 
 def duration_seconds(value):
     match = DURATION_RE.fullmatch(value or "")
