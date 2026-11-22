@@ -92,11 +92,11 @@ th{position:sticky;top:0;background:#202b3b;cursor:pointer}a{color:#8fc7ff;text-
 <input id="q" placeholder="Search title or creator…">
 <select id="group"><option value="">All candidate groups</option><option>HIGH_POTENTIAL</option><option>MANUAL_REVIEW</option><option>EXCLUDE</option></select>
 <select id="category"><option value="">All categories</option></select>
-<select id="sort"><option value="ranking_score">Sort: Ranking score</option><option value="views_per_day">Views per day</option><option value="views">Total views</option><option value="published_at">Newest first</option></select>
+<select id="sort"><option value="ranking_score">Sort: Ranking score</option><option value="views_per_day">Views per day</option><option value="views">Total views</option><option value="published_at">Newest first</option><option value="creator_shortlist">Creator shortlist first</option></select>
 <label class="pill"><input type="checkbox" id="fresh" style="min-width:0"> New in this run</label>
 </div>
 <div class="muted small" id="count"></div>
-<section class="wrap"><table><thead><tr><th>Video</th><th>Creator</th><th>Group</th><th>Category</th><th>Views</th><th>Views/day</th><th>Like %</th><th>Age (days)</th><th>Duration</th><th>Shorts title hint</th><th>Reason</th></tr></thead><tbody id="body"></tbody></table></section>
+<section class="wrap"><table><thead><tr><th>Video</th><th>Creator</th><th>Group</th><th>Category</th><th>Views</th><th>Views/day</th><th>Like %</th><th>Age (days)</th><th>Duration</th><th>Shorts title hint</th><th>Creator shortlist</th><th>Usage rights</th><th>Reason</th></tr></thead><tbody id="body"></tbody></table></section>
 <script>
 const rows = __DATA__;
 const seen = new Set(rows.filter(x=>x.is_new).map(x=>x.video_id));
@@ -113,9 +113,9 @@ function render(){
  &&(!document.querySelector('#category').value||x.category===document.querySelector('#category').value)
  &&(!document.querySelector('#fresh').checked||x.is_new));
  const key=document.querySelector('#sort').value;
- a.sort((x,y)=>key==='published_at'?y.published_at.localeCompare(x.published_at):(Number(y[key]||0)-Number(x[key]||0)));
+ a.sort((x,y)=>key==='published_at'?y.published_at.localeCompare(x.published_at):key==='creator_shortlist'?(Number(y.creator_shortlist)-Number(x.creator_shortlist))||(Number(y.ranking_score)-Number(x.ranking_score)):(Number(y[key]||0)-Number(x[key]||0)));
  document.querySelector('#count').textContent='Showing '+a.length+' of '+rows.length+' candidates';
- document.querySelector('#body').innerHTML=a.map(x=>'<tr><td><a target="_blank" rel="noopener" href="'+x.url+'">'+esc(x.title)+'</a><div class="muted small">'+x.video_id+'</div></td><td>'+esc(x.channel)+'</td><td class="'+(x.candidate_group==='HIGH_POTENTIAL'?'high':x.candidate_group==='EXCLUDE'?'exclude':'')+'">'+x.candidate_group+'</td><td>'+esc(x.category)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.views_per_day)+'</td><td>'+Number(x.like_rate_pct||0).toFixed(2)+'%</td><td>'+x.age_days+'</td><td>'+x.duration_seconds+'s</td><td>'+(x.shorts_hint_in_title?'Yes':'No')+'</td><td>'+esc(x.review_reason)+'</td></tr>').join('');
+ document.querySelector('#body').innerHTML=a.map(x=>'<tr><td><a target="_blank" rel="noopener" href="'+x.url+'">'+esc(x.title)+'</a><div class="muted small">'+x.video_id+'</div></td><td>'+esc(x.channel)+'</td><td class="'+(x.candidate_group==='HIGH_POTENTIAL'?'high':x.candidate_group==='EXCLUDE'?'exclude':'')+'">'+x.candidate_group+'</td><td>'+esc(x.category)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.views_per_day)+'</td><td>'+Number(x.like_rate_pct||0).toFixed(2)+'%</td><td>'+x.age_days+'</td><td>'+x.duration_seconds+'s</td><td>'+(x.shorts_hint_in_title?'Yes':'No')+'</td><td>'+(x.creator_shortlist?'Yes':'No')+'</td><td>'+esc(x.rights_status||'PERMISSION_REQUIRED')+'</td><td>'+esc(x.review_reason)+'</td></tr>').join('');
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 document.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',render));render();
@@ -185,7 +185,8 @@ def main():
                 "candidate_group":group,
                 "review_flag":review_flag,
                 "review_reason":review_reason,
-                "creator_shortlist":shortlist})
+                "creator_shortlist":shortlist,
+                "rights_status":"PERMISSION_REQUIRED"})
     rows.sort(key=lambda r:r["ranking_score"], reverse=True)
 
     OUT.mkdir(exist_ok=True)
