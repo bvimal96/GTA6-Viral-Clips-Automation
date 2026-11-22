@@ -99,7 +99,9 @@ def main():
                 "ranking_score":round(score,4),
                 "category":category_for(title, channel),
                 "shorts_status":"Short-form candidate (<=180s); vertical Shorts format not verifiable via this API",
-                "shorts_hint_in_title":bool(re.search(r"#shorts|\bshorts\b", title, re.I))})
+                "shorts_hint_in_title":bool(re.search(r"#shorts|\bshorts\b", title, re.I)),
+                "review_flag":("OFFICIAL_OR_TRAILER" if category_for(title, channel) in ("Rockstar Official","Trailer / Repost") else ("WEAK_TITLE_CONTEXT" if len(re.sub(r"#\\w+|[^A-Za-z0-9 ]"," ", title).split()) < 3 else "MANUAL_CHECK")),
+                "creator_shortlist":category_for(title, channel) not in ("Rockstar Official","Trailer / Repost") and len(re.sub(r"#\\w+|[^A-Za-z0-9 ]"," ", title).split()) >= 3})
     rows.sort(key=lambda r:r["ranking_score"], reverse=True)
 
     OUT.mkdir(exist_ok=True)
