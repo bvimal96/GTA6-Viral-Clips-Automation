@@ -29,6 +29,20 @@ def duration_seconds(value):
     hours, minutes, seconds = (int(x or 0) for x in match.groups())
     return hours * 3600 + minutes * 60 + seconds
 
+def candidate_review(title, category):
+    """Title-only pre-screen; does not verify content, vertical format, or reuse rights."""
+    if category in ("Rockstar Official", "Trailer / Repost"):
+        return "EXCLUDE", "OFFICIAL_OR_TRAILER", False
+    # Unicode-aware tokenization keeps meaningful non-English titles eligible for review.
+    cleaned = re.sub(r"#\w+|[^\w\s]", " ", title)
+    words = cleaned.split()
+    direct_gta6_title = bool(GTA6_RE.search(title) or re.search(r"#gta\s*6|#gtavi", title, re.I))
+    if direct_gta6_title and len(words) >= 3:
+        return "HIGH_POTENTIAL", "TITLE_CONTEXT_PRESENT", True
+    if len(words) < 3:
+        return "MANUAL_REVIEW", "WEAK_TITLE_CONTEXT", False
+    return "MANUAL_REVIEW", "MANUAL_CHECK", False
+
 def category_for(title, channel):
     t = title.lower()
     c = channel.lower()
@@ -88,6 +102,7 @@ def main():
             score = (0.55 * math.log1p(views_per_day)
                      + 0.20 * math.log1p(views)
                      + 0.25 * math.log1p(like_rate + comment_rate))
+            group, review_flag, shortlist = candidate_review(title, category_for(title, channel))
             rows.append({"video_id":item["id"],"title":title,"channel":channel,
                 "published_at":sn.get("publishedAt",""),
                 "url":f"https://www.youtube.com/watch?v={item['id']}",
@@ -100,7 +115,8 @@ def main():
                 "category":category_for(title, channel),
                 "shorts_status":"Short-form candidate (<=180s); vertical Shorts format not verifiable via this API",
                 "shorts_hint_in_title":bool(re.search(r"#shorts|\bshorts\b", title, re.I)),
-                "review_flag":("OFFICIAL_OR_TRAILER" if category_for(title, channel) in ("Rockstar Official","Trailer / Repost") else ("WEAK_TITLE_CONTEXT" if len(re.sub(r"#\w+|[^A-Za-z0-9 ]"," ", title).split()) < 3 else "MANUAL_CHECK")),
+                "candidate_group":group,
+                "review_flag":review_flag,
                 "creator_shortlist":category_for(title, channel) not in ("Rockstar Official","Trailer / Repost") and len(re.sub(r"#\w+|[^A-Za-z0-9 ]"," ", title).split()) >= 3})
     rows.sort(key=lambda r:r["ranking_score"], reverse=True)
 
