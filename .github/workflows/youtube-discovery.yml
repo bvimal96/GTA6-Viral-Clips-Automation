@@ -2,6 +2,12 @@ name: GTA 6 YouTube Discovery
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/discover.py'
+      - 'config/search_terms.txt'
+      - '.github/workflows/youtube-discovery.yml'
   schedule:
     # Twice daily. GitHub may delay scheduled runs during busy periods.
     - cron: "17 4,16 * * *"
