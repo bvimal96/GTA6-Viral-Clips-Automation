@@ -82,7 +82,7 @@ def duration_seconds(value):
 NON_GAMEPLAY_TITLE_RE = re.compile(
     r"\b(?:reaction|reacts|reacting|review|podcast|face ?cam|webcam|selfie|vlog|"
     r"commentary|commentator|discussion|talking about|my thoughts|live stream|"
-    r"streamer reacts)\\b", re.I
+    r"streamer reacts)\b", re.I
 )
 
 def candidate_review(title, category):
