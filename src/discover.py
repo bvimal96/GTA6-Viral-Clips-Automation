@@ -29,14 +29,20 @@ def duration_seconds(value):
     hours, minutes, seconds = (int(x or 0) for x in match.groups())
     return hours * 3600 + minutes * 60 + seconds
 
-def candidate_review(title, category):
-    """Conservative title-only triage; does not verify footage, vertical format, or reuse rights."""
-    if category in ("Rockstar Official", "Trailer / Repost"):
-        return "EXCLUDE", "OFFICIAL_OR_TRAILER", False, "Official channel or trailer wording"
+NON_GAMEPLAY_TITLE_RE = re.compile(
+    r"\\b(?:reaction|reacts|reacting|review|podcast|face ?cam|webcam|selfie|vlog|"
+    r"commentary|commentator|discussion|talking about|my thoughts|live stream|"
+    r"streamer reacts)\\b", re.I
+)
 
-    # Exclude GTA 5 crossover titles to preserve the GTA 6-only channel scope.
+def candidate_review(title, category):
+    """Title-based triage only; visual gameplay and reuse rights still need verification."""
+    if category in ("Rockstar Official", "Trailer / Repost"):
+        return "EXCLUDE", "OFFICIAL_OR_TRAILER", False, "Official channel or trailer wording", "NON_GAMEPLAY_OR_PROMOTIONAL"
     if GTA5_RE.search(title):
-        return "EXCLUDE", "GTA5_CROSSOVER_OR_TITLE", False, "GTA 5 is explicitly mentioned in the title"
+        return "EXCLUDE", "GTA5_CROSSOVER_OR_TITLE", False, "GTA 5 is explicitly mentioned in the title", "OUT_OF_SCOPE_GTA5"
+    if NON_GAMEPLAY_TITLE_RE.search(title):
+        return "EXCLUDE", "NON_GAMEPLAY_TITLE_SIGNAL", False, "Title indicates reaction, review, podcast, facecam, vlog, or commentary", "COMMENTARY_OR_FACE_CONTENT"
 
     cleaned = re.sub(r"#\w+|[^\w\s]", " ", title)
     words = cleaned.split()
@@ -51,10 +57,10 @@ def candidate_review(title, category):
     has_specific_topic = any(term in title_lower for term in topic_terms)
 
     if title_has_gta6 and len(words) >= 3 and has_specific_topic:
-        return "HIGH_POTENTIAL", "GTA6_TITLE_AND_TOPIC", True, "GTA 6 named in title with a specific topic clue"
+        return "HIGH_POTENTIAL", "GTA6_TITLE_AND_TOPIC", True, "GTA 6 named in title with a specific topic clue", "VISUAL_GAMEPLAY_CHECK_REQUIRED"
     if len(words) < 3 or not title_has_gta6:
-        return "MANUAL_REVIEW", "WEAK_TITLE_CONTEXT", False, "Title alone does not establish clear GTA 6 topic"
-    return "MANUAL_REVIEW", "TOPIC_NOT_CLEAR", False, "GTA 6 title present but specific clip topic is unclear"
+        return "MANUAL_REVIEW", "WEAK_TITLE_CONTEXT", False, "Title alone does not establish clear GTA 6 topic", "VISUAL_GAMEPLAY_CHECK_REQUIRED"
+    return "MANUAL_REVIEW", "TOPIC_NOT_CLEAR", False, "GTA 6 title present but specific clip topic is unclear", "VISUAL_GAMEPLAY_CHECK_REQUIRED"
 
 def category_for(title, channel):
     t = title.lower()
@@ -87,16 +93,17 @@ th{position:sticky;top:0;background:#202b3b;cursor:pointer}a{color:#8fc7ff;text-
 </style></head><body>
 <h1>GTA 6 Shorts Discovery</h1><div class="muted">Generated: __STAMP__ · Public metadata only · Candidate list, not verified viral Shorts</div>
 <div class="cards" id="metrics"></div>
-<div class="note muted">Important: YouTube Data API duration filtering (≤180 seconds) does not prove vertical Shorts format, actual GTA 6 footage, or permission to reuse. Review content and rights separately. No video is downloaded.</div>
+<div class="note muted">Important: YouTube metadata and titles cannot prove that a clip is actual in-game footage. Reaction, review, podcast, facecam, vlog and commentary titles are excluded; all remaining candidates require visual gameplay verification. Duration ≤180 seconds does not prove vertical Shorts format or permission to reuse. No video is downloaded.</div>
 <div class="controls">
 <input id="q" placeholder="Search title or creator…">
 <select id="group"><option value="">All candidate groups</option><option>HIGH_POTENTIAL</option><option>MANUAL_REVIEW</option><option>EXCLUDE</option></select>
 <select id="category"><option value="">All categories</option></select>
+<select id="content"><option value="">All content screening</option><option>VISUAL_GAMEPLAY_CHECK_REQUIRED</option><option>COMMENTARY_OR_FACE_CONTENT</option><option>NON_GAMEPLAY_OR_PROMOTIONAL</option><option>OUT_OF_SCOPE_GTA5</option></select>
 <select id="sort"><option value="ranking_score">Sort: Ranking score</option><option value="views_per_day">Views per day</option><option value="views">Total views</option><option value="published_at">Newest first</option><option value="creator_shortlist">Creator shortlist first</option></select>
 <label class="pill"><input type="checkbox" id="fresh" style="min-width:0"> New in this run</label>
 </div>
 <div class="muted small" id="count"></div>
-<section class="wrap"><table><thead><tr><th>Video</th><th>Creator</th><th>Group</th><th>Category</th><th>Views</th><th>Views/day</th><th>Like %</th><th>Age (days)</th><th>Duration</th><th>Shorts title hint</th><th>Creator shortlist</th><th>Usage rights</th><th>Reason</th></tr></thead><tbody id="body"></tbody></table></section>
+<section class="wrap"><table><thead><tr><th>Video</th><th>Creator</th><th>Group</th><th>Category</th><th>Views</th><th>Views/day</th><th>Like %</th><th>Age (days)</th><th>Duration</th><th>Shorts title hint</th><th>Creator shortlist</th><th>Content screening</th><th>Usage rights</th><th>Reason</th></tr></thead><tbody id="body"></tbody></table></section>
 <script>
 const rows = __DATA__;
 const seen = new Set(rows.filter(x=>x.is_new).map(x=>x.video_id));
@@ -111,11 +118,12 @@ function render(){
  let a=rows.filter(x=>(!document.querySelector('#q').value || (x.title+' '+x.channel).toLowerCase().includes(document.querySelector('#q').value.toLowerCase()))
  &&(!document.querySelector('#group').value||x.candidate_group===document.querySelector('#group').value)
  &&(!document.querySelector('#category').value||x.category===document.querySelector('#category').value)
+ &&(!document.querySelector('#content').value||x.content_type===document.querySelector('#content').value)
  &&(!document.querySelector('#fresh').checked||x.is_new));
  const key=document.querySelector('#sort').value;
  a.sort((x,y)=>key==='published_at'?y.published_at.localeCompare(x.published_at):key==='creator_shortlist'?(Number(y.creator_shortlist)-Number(x.creator_shortlist))||(Number(y.ranking_score)-Number(x.ranking_score)):(Number(y[key]||0)-Number(x[key]||0)));
  document.querySelector('#count').textContent='Showing '+a.length+' of '+rows.length+' candidates';
- document.querySelector('#body').innerHTML=a.map(x=>'<tr><td><a target="_blank" rel="noopener" href="'+x.url+'">'+esc(x.title)+'</a><div class="muted small">'+x.video_id+'</div></td><td>'+esc(x.channel)+'</td><td class="'+(x.candidate_group==='HIGH_POTENTIAL'?'high':x.candidate_group==='EXCLUDE'?'exclude':'')+'">'+x.candidate_group+'</td><td>'+esc(x.category)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.views_per_day)+'</td><td>'+Number(x.like_rate_pct||0).toFixed(2)+'%</td><td>'+x.age_days+'</td><td>'+x.duration_seconds+'s</td><td>'+(x.shorts_hint_in_title?'Yes':'No')+'</td><td>'+(x.creator_shortlist?'Yes':'No')+'</td><td>'+esc(x.rights_status||'PERMISSION_REQUIRED')+'</td><td>'+esc(x.review_reason)+'</td></tr>').join('');
+ document.querySelector('#body').innerHTML=a.map(x=>'<tr><td><a target="_blank" rel="noopener" href="'+x.url+'">'+esc(x.title)+'</a><div class="muted small">'+x.video_id+'</div></td><td>'+esc(x.channel)+'</td><td class="'+(x.candidate_group==='HIGH_POTENTIAL'?'high':x.candidate_group==='EXCLUDE'?'exclude':'')+'">'+x.candidate_group+'</td><td>'+esc(x.category)+'</td><td>'+fmt(x.views)+'</td><td>'+fmt(x.views_per_day)+'</td><td>'+Number(x.like_rate_pct||0).toFixed(2)+'%</td><td>'+x.age_days+'</td><td>'+x.duration_seconds+'s</td><td>'+(x.shorts_hint_in_title?'Yes':'No')+'</td><td>'+(x.creator_shortlist?'Yes':'No')+'</td><td>'+esc(x.content_type||'VISUAL_GAMEPLAY_CHECK_REQUIRED')+'</td><td>'+esc(x.rights_status||'PERMISSION_REQUIRED')+'</td><td>'+esc(x.review_reason)+'</td></tr>').join('');
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 document.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',render));render();
@@ -169,7 +177,7 @@ def main():
                      + 0.20 * math.log1p(views)
                      + 0.25 * math.log1p(like_rate + comment_rate))
             category = category_for(title, channel)
-            group, review_flag, shortlist, review_reason = candidate_review(title, category)
+            group, review_flag, shortlist, review_reason, content_type = candidate_review(title, category)
             rows.append({"video_id":item["id"],"title":title,"channel":channel,
                 "published_at":sn.get("publishedAt",""),
                 "url":f"https://www.youtube.com/watch?v={item['id']}",
@@ -186,6 +194,7 @@ def main():
                 "review_flag":review_flag,
                 "review_reason":review_reason,
                 "creator_shortlist":shortlist,
+                "content_type":content_type,
                 "rights_status":"PERMISSION_REQUIRED"})
     rows.sort(key=lambda r:r["ranking_score"], reverse=True)
 
