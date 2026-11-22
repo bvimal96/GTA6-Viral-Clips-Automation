@@ -6,6 +6,8 @@ Free, YouTube-only discovery workflow for a GTA 6 Shorts-focused channel. It rea
 - GTA 6 / GTA VI only; explicit GTA 5 title crossovers are excluded.
 - Candidate duration is 180 seconds or less. This is a duration filter only; the YouTube Data API does not prove that a video is a vertical Short.
 - Candidate triage: HIGH_POTENTIAL, MANUAL_REVIEW, EXCLUDE. These are title-based review queues, not verified content labels.
+- Strict content scope: actual GTA 6 in-game footage/gameplay only. Titles indicating reaction, review, podcast, facecam, selfie, vlog, discussion, or commentary are excluded.
+- All other candidates are marked VISUAL_GAMEPLAY_CHECK_REQUIRED because public metadata cannot prove what appears in the video. Manually inspect the clip and reject talking-head/selfie/commentary videos.
 - Ranking uses views/day, total views, and public like/comment rates. It is a discovery heuristic, not a quality or future-virality guarantee.
 - Dashboard includes creator shortlist, new-this-run filtering, and an explicit usage-rights status.
 - Every discovered third-party candidate starts as PERMISSION_REQUIRED. No public video is treated as cleared for reuse.
@@ -18,7 +20,7 @@ Free, YouTube-only discovery workflow for a GTA 6 Shorts-focused channel. It rea
 2. Select **Run workflow** for an immediate refresh, or let the scheduled runs execute.
 3. Open the completed run and download the `gta6-candidates-N` artifact ZIP.
 4. Extract the ZIP and open `index.html` in a browser. CSV/JSON are included for sorting and further review.
-5. Use the HIGH_POTENTIAL filter as the first manual-review queue. Check the actual video, not just its title or score.
+5. Use the HIGH_POTENTIAL filter as the first manual-review queue. Check the actual video, not just its title or score. Keep only in-game GTA 6 footage; reject facecam, selfie, talking-head, reaction, review, podcast, vlog, and commentary content.
 
 Scheduled runs: 04:17 and 16:17 UTC (09:47 and 21:47 IST). GitHub may delay scheduled runs. Editing the search terms or scanner files on `main` also triggers a run.
 
