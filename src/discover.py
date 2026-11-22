@@ -99,7 +99,7 @@ def main():
                 "ranking_score":round(score,4),
                 "category":category_for(title, channel),
                 "shorts_status":"Short-form candidate (<=180s); vertical Shorts format not verifiable via this API",
-                "shorts_hint_in_title":bool(re.search(r"#shorts|\\bshorts\\b", title, re.I))})
+                "shorts_hint_in_title":bool(re.search(r"#shorts|\bshorts\b", title, re.I))})
     rows.sort(key=lambda r:r["ranking_score"], reverse=True)
 
     OUT.mkdir(exist_ok=True)
