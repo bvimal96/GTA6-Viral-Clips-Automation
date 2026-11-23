@@ -35,14 +35,14 @@ Missing or hidden public metrics are treated as zero. A high score means strong 
 ## Usage rights — mandatory gate
 - Discovery is not permission.
 - Every third-party result is marked `PERMISSION_REQUIRED` until the owner grants explicit permission or a valid license is verified.
-- Record permissions and evidence in `rights/rights_register_template.csv` (make a private working copy; do not put personal contact details or private permission documents in this public repository).
-- `AUTHORIZED` should be used only after confirming the rights holder, permitted platforms, editing rights, monetization rights, territory, and validity period in writing.
+- Record each source in `rights/rights_register_template.csv` using `USER_OWNED` or `THIRD_PARTY`. For third-party clips, keep `download_eligible=FALSE` until written permission or a valid license is verified. Make a private working copy; do not put personal contact details or private permission documents in this public repository.
+- For third-party footage, `AUTHORIZED` should be used only after confirming the rights holder, permitted platforms, editing rights, monetization rights, territory, and validity period in writing. For owned footage, confirm that the uploader/channel owner actually owns the recording and has the underlying game-content rights needed for the intended use.
 - If permission is refused or rights are unclear, do not download, edit, or publish that creator's footage.
 - Copyright clearance and YouTube reused-content monetization eligibility are separate checks.
 
 ## Production and publishing
 - Only use footage you own or are explicitly licensed/authorized to edit and publish.
-- Put private source files on your own computer in `source_media/approved/` (this folder is git-ignored); never upload private footage or permission evidence to this public repo.
+- Put your own source files and third-party files with verified permission on your own computer in `source_media/approved/` (this folder is git-ignored); never upload private footage or permission evidence to this public repo.
 - No third-party YouTube downloader, scraping, or automatic clipping from public URLs is included.
 - No automatic YouTube upload or publishing is included. Publishing requires separate explicit approval.
 - The current automation is the discovery and review system; final video editing/export is a separate production step using rights-cleared footage.
