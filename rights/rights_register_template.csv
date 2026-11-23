@@ -1,1 +1,3 @@
-video_id,video_url,creator,rights_holder,contact_method,permission_status,allowed_platforms,editing_allowed,monetization_allowed,territory,start_date,end_date,evidence_reference,verified_by,verified_on,notes
+video_id,video_url,creator,footage_source,ownership_type,rights_holder,contact_method,permission_status,allowed_platforms,editing_allowed,monetization_allowed,territory,start_date,end_date,evidence_reference,verified_by,verified_on,download_eligible,notes
+,,,USER_OWNED,USER_OWNED,,,,YouTube,,,,,,,,,TRUE,Use only source footage recorded/owned by the channel owner
+,,,THIRD_PARTY,THIRD_PARTY_LICENSE_OR_WRITTEN_PERMISSION,,,,YouTube,,,,,,,,,FALSE,Keep FALSE until written permission/license is checked and recorded
