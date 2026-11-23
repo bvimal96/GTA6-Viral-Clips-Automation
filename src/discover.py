@@ -203,10 +203,9 @@ def main():
             title, channel = sn.get("title", ""), sn.get("channelTitle", "")
             description = sn.get("description", "")
             text = title + " " + description
-            if not GTA6_RE.search(text):
-                continue
-            # Strict channel scope: exclude explicit GTA 5 crossovers in the title.
-            if GTA5_RE.search(title):
+            # Require GTA 6 to be explicit in the title; description-only hashtags are insufficient.
+            title_has_gta6 = bool(GTA6_RE.search(title) or re.search(r"#gta\\s*6|#gtavi", title, re.I))
+            if not title_has_gta6:
                 continue
             duration = item.get("contentDetails", {}).get("duration", "")
             seconds = duration_seconds(duration)
@@ -238,14 +237,16 @@ def main():
                 "comment_rate_pct":round(comment_rate,3),
                 "ranking_score":round(score,4),
                 "category":category,
-                "shorts_status":"Short-form candidate (<=180s); vertical Shorts format not verifiable via this API",
+                "shorts_status":"DURATION_ONLY_NOT_VERIFIED_AS_VERTICAL_SHORT",
+                "vertical_format_status":"UNVERIFIED_REQUIRES_VISUAL_CHECK",
                 "shorts_hint_in_title":bool(re.search(r"#shorts|\bshorts\b", title, re.I)),
                 "candidate_group":group,
                 "review_flag":review_flag,
                 "review_reason":review_reason,
                 "creator_shortlist":shortlist,
                 "content_type":content_type,
-                "rights_status":"PERMISSION_REQUIRED"})
+                "rights_status":"PENDING_NO_DOWNLOAD_OR_EDIT",
+                "download_eligible":False})
     rows.sort(key=lambda r:r["ranking_score"], reverse=True)
 
     OUT.mkdir(exist_ok=True)
@@ -272,7 +273,8 @@ def main():
     print(f"Discovered {len(rows)} relevant GTA 6 short-form candidates; {len(fresh)} new candidates.")
     print("Groups: " + ", ".join(f"{k}={v}" for k,v in counts.items()))
     print("Dashboard: output/index.html")
-    print("Note: <=180 seconds is a duration filter, not proof of vertical YouTube Shorts format.")
+    print("Note: <=180 seconds is duration-only; vertical Shorts format requires visual verification.")
+    print("Rights gate: third-party videos remain PENDING; no downloading/editing without documented authorization.")
     return 0
 
 if __name__ == "__main__":
